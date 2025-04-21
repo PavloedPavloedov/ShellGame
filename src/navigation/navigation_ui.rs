@@ -8,13 +8,10 @@ use ratatui::{
     widgets::{Block, BorderType, Borders, Paragraph, Tabs, Widget},
 };
 
-pub mod tab_ui {
-    mod navigation;
-    use navigation::navigation_logic::tab_logic::TabManager;
-    impl Widget for TabManager {
-        fn create_widget_from_tab_list() {
-        }
-        fn render_tab_list() {
-        }
-    }
+pub fn draw() {
+
+}
+
+fn draw_tab(&mut self, tab_name: &str, ) {
+    let 
 }
