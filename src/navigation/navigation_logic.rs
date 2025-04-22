@@ -10,48 +10,51 @@ struct Tab {
     name: String,
     uuid: Uuid,
     number: usize,
-    main_layout: Layout,
-    layout_list: HashMap<Layout, Vec<Widget>>,
+    layout_list: Vec<Layout>,
+}
+
+impl Tab {
+    fn new(
+        tab_name: &str,
+        tab_uuid: Uuid,
+        tab_num: usize,
+        tab_list: Vec<Layout>,
+    ) -> io::Result<Self> {
+        Ok(Tab {
+            name: tab_name.to_string(),
+            uuid: tab_uuid,
+            number: tab_num,
+            layout_list: tab_list,
+        })
+    }
+
+    pub fn get_uuid(&self) -> Uuid {
+        self.uuid
+    }
 }
 //Структура менеждера вкладок, который содержит в себе текущую активную вкладку,
 //и список высех вкладок
 pub struct TabManager {
     current_tab_uuid: Option<Uuid>,
-    tab_hashmap: HashMap<Uuid, Tab>,
+    tab_list: Vec<Tab>,
 }
 // Функции для работы с непосредственно менеджером вкладок
 impl TabManager {
     //Инициализирование полностью путого менеджера вкладок
     pub fn new() -> io::Result<Self> {
-        let manager = TabManager {
+        Ok(TabManager {
             current_tab_uuid: None,
-            tab_hashmap: HashMap::with_capacity(5),
-        };
-        Ok(manager)
+            tab_list: Vec::with_capacity(5),
+        })
     }
     //Добавление новой вкладки с указанным uuid, название вкладки и виджеты, прикреплённые к слоям
-    pub fn add_tab(
-        &mut self,
-        tab_uuid: Uuid,
-        tab_name: String,
-        tab_layout: Layout,
-        tab_layout_list: HashMap<Layout, Vec<Widget>>,
-    ) -> io::Result<Uuid> {
-        self.tab_hashmap.insert(
-            tab_uuid,
-            Tab {
-                name: tab_name,
-                uuid: tab_uuid,
-                number: self.tab_hashmap.len(),
-                main_layout: tab_layout,
-                layout_list: tab_layout_list,
-            },
-        );
-        Ok(tab_uuid)
+    pub fn add_tab_to_list(&mut self, tab: Tab) -> io::Result<()> {
+        self.tab_list.push(tab);
+        Ok(())
     }
     //Удаление вкладки из списка вкладок
     pub fn remove_tab_from_list(&mut self, tab_uuid: Uuid) -> io::Result<Uuid> {
-        match self.tab_hashmap.remove_entry(&tab_uuid) {
+        match self.tab_list.remove_entry(&tab_uuid) {
             Some((key, _value)) => Ok(key),
             None => Err(io::Error::new(
                 io::ErrorKind::NotFound,
@@ -78,27 +81,24 @@ impl TabManager {
         Ok(tab_uuid)
     }
     //Получение uuid текущей активной вкладки
-    pub fn current_tab(&self) -> Option<Uuid> {
-        match self.current_tab_uuid {
-            Some(curr_uuid) => Some(curr_uuid),
-            None => self
-                .tab_hashmap
-                .keys()
-                .next()
-                .map_or(None, |new_curr_tab_uuid| Some(new_curr_tab_uuid.clone())),
-        }
+    pub fn current_tab(&self) -> Option<Tab> {
+        self.current_tab_uuid.and_then(|tab_uuid| {
+            self.tab_list
+                .iter()
+                .find(|tab| tab_uuid == tab.uuid)
+                .cloned()
+        })
     }
     //Получение предыдудщей вкладки от активной по порядковому номеру, если такой не существует, возращается None
     pub fn previous_tab(&self) -> Option<Uuid> {
-        let current_tab_uuid = match self.current_tab_uuid {
-            Some(tab_uuid) => tab_uuid,
-            None => return None,
-        };
+        let current_tab_uuid = self.current_tab_uuid.and_then(|tab_uuid| {
+            Some(tab_uuid)
+        })?;
 
         let previous_tab_num = self
-            .tab_hashmap
-            .get(&current_tab_uuid)
-            .map(|value| value.number.checked_sub(1).unwrap_or(0))?;
+            .tab_list
+            .iter()
+            .position(|tab| tab.uuid == current_tab_uuid);
 
         self.tab_hashmap
             .iter()
@@ -133,13 +133,5 @@ impl TabManager {
                 }
             })
             .next()
-    }
-}
-
-impl Widget for TabManager {
-    fn render(self, area: Rect, buf: &mut Buffer)
-    where
-        Self: Sized,
-    {
     }
 }

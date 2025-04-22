@@ -13,5 +13,5 @@ pub fn draw() {
 }
 
 fn draw_tab(&mut self, tab_name: &str, ) {
-    let 
+    Tabs::new()
 }
