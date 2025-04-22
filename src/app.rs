@@ -1,12 +1,19 @@
+use ratatui::{
+    DefaultTerminal,
+    layout::Constraint::{self}
+};
+use strum_macros::{FromRepr, Display};
+use std::io;
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-struct App {
+pub struct App {
     #[default]
     Running,
     Exit,
 }
 
 impl App {
-    fn run(mut self, mut terminal: DefaultTerminal) -> io::Result<()> {
+    pub fn run(mut self, mut terminal: DefaultTerminal) -> io::Result<()> {
         while self.is_running() {
             terminal.draw(|frame| frame.render_widget(self, frame.area()))?;
             self.handle_events()?;
@@ -34,10 +41,4 @@ impl App {
         }
         Ok(())
     }
-}
-
-fn main() -> io::Result<()> {
-    let app_result = App::default().run(ratatui::init());
-    ratatui::restore();
-    app_result
 }
