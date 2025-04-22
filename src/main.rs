@@ -1,10 +1,7 @@
-use std::io;
-
-mod navigation_logic;
-use navigation_logic::TabManager;
-use uuid::Uuid;
+mod navigation;
+use navigation::navigation_logic::TabManager;
 
 fn main() { //-> io::Result<()> {
-    let mut manager = TabManager::new().unwrap();
+    let manager = TabManager::new().unwrap();
     
 }
