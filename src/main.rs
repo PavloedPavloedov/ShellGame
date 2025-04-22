@@ -1,7 +1,12 @@
 mod navigation;
-use navigation::navigation_logic::TabManager;
+mod app;
 
-fn main() { //-> io::Result<()> {
-    let manager = TabManager::new().unwrap();
-    
+use navigation::navigation_logic;
+use crate::app::App;
+use std::io;
+
+fn main() -> io::Result<()> {
+    let app_result = App::default().run(ratatui::init());
+    ratatui::restore();
+    app_result
 }
