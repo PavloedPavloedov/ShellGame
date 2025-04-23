@@ -1,7 +1,5 @@
-mod navigation;
 mod app;
 
-use navigation::navigation_logic;
 use crate::app::App;
 use std::io;
 
