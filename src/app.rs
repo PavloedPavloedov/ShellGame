@@ -1,22 +1,30 @@
 mod navigation;
 
-use crate::app::navigation::SelectedTab;
+use crate::navigation::SelectedPage;
 use ratatui::{
     DefaultTerminal,
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
-    layout::Rect,
-    widgets::Widget,
+    layout::{self, Constraint, Layout, Rect},
+    style::Color,
+    widgets::{Block, BorderType, Borders, Tabs, Widget},
 };
 use std::io;
+use strum::IntoEnumIterator;
 
-#[derive(Default)]
-pub struct App {
-    state: AppState,
-    selected_tab: SelectedTab,
+fn main() -> io::Result<()> {
+    let app_result = App::default().run(ratatui::init());
+    ratatui::restore();
+    app_result
 }
 
-#[derive(Default, PartialEq, Eq)]
+#[derive(Default, Clone, Copy)]
+pub struct App {
+    state: AppState,
+    selected_tab: SelectedPage,
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq)]
 enum AppState {
     #[default]
     Running,
@@ -58,10 +66,31 @@ impl App {
     fn previous_tab(&mut self) {
         self.selected_tab = self.selected_tab.previous();
     }
+
+    fn render_tab_title(self, area: Rect, buf: &mut Buffer) {
+        let titles = SelectedPage::iter().map(SelectedPage::title);
+        let highlight_style = (Color::default(), self.selected_tab.palette().c700);
+        let selected_tab_index = self.selected_tab as usize;
+        Tabs::new(titles)
+            .highlight_style(highlight_style)
+            .select(selected_tab_index)
+            .padding("", "")
+            .divider(" ")
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_type(BorderType::Rounded),
+            )
+            .render(area, buf);
+    }
 }
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        self.selected_tab.render(area, buf);
+        let [tab_title_area, pages_area] = Layout::default()
+            .direction(layout::Direction::Vertical)
+            .constraints([Constraint::Min(3), Constraint::Percentage(100)])
+            .areas(area);
+        self.render_tab_title(tab_title_area, buf);
     }
 }
