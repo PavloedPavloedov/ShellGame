@@ -5,7 +5,7 @@ use ratatui::{
 };
 
 static BORDERS: Borders = Borders::ALL;
-static BORDERS_TYPE: BorderType = BorderType::Double;
+static BORDERS_TYPE: BorderType = BorderType::Rounded;
 
 pub struct SecondPage {
     name: String,

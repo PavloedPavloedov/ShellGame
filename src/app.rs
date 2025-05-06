@@ -1,10 +1,4 @@
-mod firstpage;
-mod navigation;
-mod secondpage;
-mod thirdpage;
-
-use crate::firstpage::FirstPage;
-use crate::navigation::SelectedTab;
+use crate::navigation::TabState;
 use crate::secondpage::SecondPage;
 use crate::thirdpage::ThirdPage;
 
@@ -13,35 +7,24 @@ use ratatui::{
     buffer::Buffer,
     crossterm::event::{self, Event, KeyCode, KeyEventKind},
     layout::{self, Layout, Rect},
-    style::palette::tailwind,
-    widgets::{Block, Tabs, Widget},
+    widgets::Widget,
 };
 use std::io;
-use strum::IntoEnumIterator;
+use std::{sync::Arc, sync::Mutex, sync::mpsc, thread};
+use strum_macros::Display;
 
-static DIVIDER: &str = " ";
-static LEFT_PADDING: &str = " ";
-static RIGHT_PADDING: &str = " ";
-static BASE_DIRECTION: layout::Direction = layout::Direction::Vertical;
-static BORDERS: ratatui::widgets::Borders = ratatui::widgets::Borders::ALL;
 static PAGES_CONSTRAINT: layout::Constraint = layout::Constraint::Percentage(100);
 static TABS_CONSTRAINT: layout::Constraint = layout::Constraint::Min(3);
-static BORDERS_TYPE: ratatui::widgets::BorderType = ratatui::widgets::BorderType::Double;
-static BG: ratatui::prelude::Color = tailwind::GRAY.c900;
 
-fn main() -> io::Result<()> {
-    let app_result = App::default().run(ratatui::init());
-    ratatui::restore();
-    app_result
-}
+fn 
 
 #[derive(Default, Clone, Copy)]
 pub struct App {
     state: AppState,
-    selected_tab: SelectedTab,
+    tabstate: TabState,
 }
 
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Display, Clone, Copy, PartialEq, Eq)]
 enum AppState {
     #[default]
     Running,
@@ -50,19 +33,29 @@ enum AppState {
 
 impl App {
     pub fn run(mut self, mut terminal: DefaultTerminal) -> io::Result<()> {
-        while self.state == AppState::Running {
+        let (event_tx, event_rx) = mpsc::channel::<io::Result<()>>();
+        let mutex_self = Arc::new(Mutex::new(self));
+
+        let handle_self = Arc::clone(&mutex_self);
+        let handle_tread = thread::spawn(move || {
+            while (*handle_self.lock().unwrap()).state == AppState::Running {
+                let _ = event_tx.send(self.main_handle_events());
+            }
+        });
+
+        while (*mutex_self.lock().unwrap()).state == AppState::Running {
             terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
-            self.main_handle_events()?;
         }
-        Ok(())
+
+        handle_tread.join().unwrap();
+        event_rx.recv().unwrap()
     }
 
-    fn main_handle_events(&mut self) -> io::Result<()> {
+    fn main_handle_events(tx: mpsc::Sender<Event>) {
         match event::read()? {
-            Event::Key(key) if key.kind == KeyEventKind::Press => self.press_handle_events(key),
+            Event::Key(key) if key.kind == KeyEventKind::Press => tx.send(Event::Input(key_event)).unwrap(),
             _ => {}
         }
-        Ok(())
     }
 
     fn press_handle_events(&mut self, key: event::KeyEvent) {
@@ -79,34 +72,29 @@ impl App {
     }
 
     fn next_tab(&mut self) {
-        self.selected_tab = self.selected_tab.next();
+        self.tabstate = self.tabstate.next();
     }
 
     fn previous_tab(&mut self) {
-        self.selected_tab = self.selected_tab.previous();
+        self.tabstate = self.tabstate.previous();
+    }
+
+    fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
+        self.tabstate.draw(self.tabstate, area, buf);
     }
 }
 
 impl Widget for &App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let [tab_title_area, pages_area] = Layout::default()
-            .direction(BASE_DIRECTION)
-            .constraints([TABS_CONSTRAINT, PAGES_CONSTRAINT])
-            .areas(area);
+        let [tab_title_area, pages_area] =
+            Layout::vertical([TABS_CONSTRAINT, PAGES_CONSTRAINT]).areas(area);
 
-        let tabs_title = SelectedTab::iter().map(SelectedTab::title);
-        let border = Block::default().borders(BORDERS).border_type(BORDERS_TYPE);
-        Tabs::new(tabs_title)
-            .highlight_style((ratatui::style::Color::default(), BG))
-            .select(self.selected_tab as usize)
-            .divider(DIVIDER)
-            .block(border)
-            .render(tab_title_area, buf);
+        self.render_tabs(tab_title_area, buf);
 
-        match self.selected_tab {
-            SelectedTab::FirstTab => FirstPage::new().render(pages_area, buf),
-            SelectedTab::SecondTab => SecondPage::new().render(pages_area, buf),
-            SelectedTab::ThridTab => ThirdPage::new().render(pages_area, buf),
+        match self.tabstate {
+            TabState::FirstTab => (),
+            TabState::SecondTab => SecondPage::new().render(pages_area, buf),
+            TabState::ThridTab => ThirdPage::new().render(pages_area, buf),
         }
     }
 }
