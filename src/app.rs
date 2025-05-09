@@ -3,25 +3,22 @@ use crate::secondpage::SecondPage;
 use crate::thirdpage::ThirdPage;
 
 use ratatui::{
-    DefaultTerminal,
     buffer::Buffer,
-    crossterm::event::{self, Event, KeyCode, KeyEventKind},
-    layout::{self, Layout, Rect},
+    crossterm::{event, event::KeyCode, event::KeyEvent},
+    layout::{Constraint, Layout, Rect},
     widgets::Widget,
+    DefaultTerminal,
 };
-use std::io;
-use std::{sync::Arc, sync::Mutex, sync::mpsc, thread};
+use std::{io, sync::mpsc};
 use strum_macros::Display;
 
-static PAGES_CONSTRAINT: layout::Constraint = layout::Constraint::Percentage(100);
-static TABS_CONSTRAINT: layout::Constraint = layout::Constraint::Min(3);
-
-fn 
+static PAGES_CONSTRAINT: Constraint = Constraint::Percentage(100);
+static TABS_CONSTRAINT: Constraint = Constraint::Min(3);
 
 #[derive(Default, Clone, Copy)]
 pub struct App {
     state: AppState,
-    tabstate: TabState,
+    page: TabState,
 }
 
 #[derive(Default, Display, Clone, Copy, PartialEq, Eq)]
@@ -32,55 +29,28 @@ enum AppState {
 }
 
 impl App {
-    pub fn run(mut self, mut terminal: DefaultTerminal) -> io::Result<()> {
-        let (event_tx, event_rx) = mpsc::channel::<io::Result<()>>();
-        let mutex_self = Arc::new(Mutex::new(self));
-
-        let handle_self = Arc::clone(&mutex_self);
-        let handle_tread = thread::spawn(move || {
-            while (*handle_self.lock().unwrap()).state == AppState::Running {
-                let _ = event_tx.send(self.main_handle_events());
+    pub fn run(mut self, mut terminal: DefaultTerminal, rx: mpsc::Receiver<KeyEvent>) -> io::Result<()> {
+        while self.state == AppState::Running {
+            if let Ok(key) = rx.recv() {
+                match key.code {
+                    event::KeyCode::Char('q') | event::KeyCode::Char('й') | KeyCode::Esc => self.quit(),
+                    event::KeyCode::Right | event::KeyCode::Char('d') => self.next_tab(),
+                    event::KeyCode::Left | event::KeyCode::Char('a') => self.previous_tab(),
+                    _ => ()
+                }
             }
-        });
-
-        while (*mutex_self.lock().unwrap()).state == AppState::Running {
             terminal.draw(|frame| frame.render_widget(&self, frame.area()))?;
         }
-
-        handle_tread.join().unwrap();
-        event_rx.recv().unwrap()
+        Ok(())
     }
-
-    fn main_handle_events(tx: mpsc::Sender<Event>) {
-        match event::read()? {
-            Event::Key(key) if key.kind == KeyEventKind::Press => tx.send(Event::Input(key_event)).unwrap(),
-            _ => {}
-        }
-    }
-
-    fn press_handle_events(&mut self, key: event::KeyEvent) {
-        match key.code {
-            event::KeyCode::Char('q') | event::KeyCode::Char('й') | KeyCode::Esc => self.quit(),
-            event::KeyCode::Right | event::KeyCode::Char('d') => self.next_tab(),
-            event::KeyCode::Left | event::KeyCode::Char('a') => self.previous_tab(),
-            _ => (),
-        }
-    }
-
     fn quit(&mut self) {
         self.state = AppState::Exit;
     }
-
     fn next_tab(&mut self) {
-        self.tabstate = self.tabstate.next();
+        self.page = self.page.next();
     }
-
     fn previous_tab(&mut self) {
-        self.tabstate = self.tabstate.previous();
-    }
-
-    fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
-        self.tabstate.draw(self.tabstate, area, buf);
+        self.page = self.page.previous();
     }
 }
 
@@ -89,9 +59,9 @@ impl Widget for &App {
         let [tab_title_area, pages_area] =
             Layout::vertical([TABS_CONSTRAINT, PAGES_CONSTRAINT]).areas(area);
 
-        self.render_tabs(tab_title_area, buf);
+        self.page.render(tab_title_area, buf);
 
-        match self.tabstate {
+        match self.page {
             TabState::FirstTab => (),
             TabState::SecondTab => SecondPage::new().render(pages_area, buf),
             TabState::ThridTab => ThirdPage::new().render(pages_area, buf),
