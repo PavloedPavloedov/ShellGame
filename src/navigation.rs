@@ -8,8 +8,8 @@ use strum::IntoEnumIterator;
 use strum_macros::{Display, EnumIter, FromRepr};
 
 static DIVIDER: &str = " ";
-static BORDERS: ratatui::widgets::Borders = ratatui::widgets::Borders::ALL;
-static BORDERS_TYPE: ratatui::widgets::BorderType = ratatui::widgets::BorderType::Double;
+static BORDERS: Borders = Borders::ALL;
+static BORDERS_TYPE: BorderType = BorderType::Double;
 
 #[derive(Debug, Default, Display, Clone, Copy, FromRepr, EnumIter, PartialEq, Eq)]
 pub enum TabState {
@@ -32,15 +32,16 @@ impl TabState {
     pub fn next(self) -> Self {
         Self::from_repr((self as usize).saturating_add(1)).unwrap_or(Self::FirstTab)
     }
-    pub fn draw(self, selectedtab: TabState, area: Rect, buf: &mut Buffer) {
-        self.tab().select(selectedtab as usize).render(area, buf);
-    }
-    fn tab(self) -> Tabs<'static> {
+}
+
+impl Widget for TabState {
+    fn render(self, area: Rect, buf: &mut Buffer) {
         Tabs::new(TabState::iter().map(TabState::title))
             .divider(DIVIDER)
-            .block(self.block(BORDERS, BORDERS_TYPE))
-    }
-    fn block(self, border: Borders, bordertype: BorderType) -> Block<'static> {
-        Block::default().borders(border).border_type(bordertype)
+            .block(Block::default()
+            .borders(BORDERS)
+            .border_type(BORDERS_TYPE))
+            .select(self as usize)
+            .render(area, buf);
     }
 }
