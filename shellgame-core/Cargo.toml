@@ -1,0 +1,16 @@
+[package]
+name        = "shellgame-core"
+version     = "0.1.1"
+edition     = "2024"
+license     = "MIT"
+authors     = [ "PavloedPavloedov <paksenov465@gmail.com>" ]
+description = "ShellGame core"
+repository  = "https://github.com/PavloedPavloedov/ShellGame"
+
+[dependencies]
+shellgame-style = { path = "../shellgame-style" }
+shellgame-widgets = { path = "../shellgame-widgets" }
+
+ratatui = { workspace = true }
+strum_macros = { workspace = true }
+strum = { workspace = true }

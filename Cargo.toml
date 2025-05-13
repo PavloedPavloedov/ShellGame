@@ -1,12 +1,29 @@
 [package]
-name = "ShellGame"
-version = "0.1.0"
-edition = "2024"
+name        = "ShellGame"
+version     = "0.1.1"
+edition     = "2024"
+license     = "MIT"
+authors     = [ "PavloedPavloedov <paksenov465@gmail.com>" ]
+description = "ShellGame"
+repository  = "https://github.com/PavloedPavloedov/ShellGame"
 
-[dependencies]
-color-eyre = "0.6.3"
+[[bin]]
+name = "shellgame"
+path = "shellgame-core/src/main.rs"
+
+[workspace]
+members = [
+    "shellgame-widgets",
+    "shellgame-style",
+    "shellgame-core",
+    "shellgame-pages",
+]
+[workspace.dependencies]
 crossterm = "0.29.0"
 ratatui = "0.29.0"
 strum = "0.27.1"
 strum_macros = "0.27.1"
-uuid = { version = "1.16.0", features = ["v4"] } 
+
+[dependencies]
+crossterm = "0.29.0"
+ratatui = "0.29.0"
