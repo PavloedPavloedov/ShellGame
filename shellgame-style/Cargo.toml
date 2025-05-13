@@ -1,0 +1,11 @@
+[package]
+name        = "shellgame-style"
+version     = "0.1.1"
+edition     = "2024"
+license     = "MIT"
+authors     = [ "PavloedPavloedov <paksenov465@gmail.com>" ]
+description = "ShellGame user interface style"
+repository  = "https://github.com/PavloedPavloedov/ShellGame"
+
+[dependencies]
+ratatui       = { workspace = true }
